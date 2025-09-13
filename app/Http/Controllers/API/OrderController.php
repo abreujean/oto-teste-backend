@@ -6,6 +6,7 @@ use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderStatusRequest;
+use App\Jobs\ProcessOrder;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -34,46 +35,12 @@ class OrderController extends Controller
     public function store(StoreOrderRequest $request)
     {
         try {
-            // DB::transaction garante que tudo abaixo seja executado em uma transação.
-            // Ele faz o commit automaticamente no sucesso, ou rollback em caso de erro.
-            $order = DB::transaction(function () use ($request) {
-                $validatedData = $request->validated();
-                $totalAmount = 0;
+            $validatedData = $request->validated();
 
-                // Valida o estoque e calcula o total
-                foreach ($validatedData['products'] as $productData) {
-                    $product = Product::findOrFail($productData['product_id']);
+            // Despacha o Job para a fila
+            ProcessOrder::dispatch($validatedData, Auth::user()->id);
 
-                    if ($product->stock < $productData['quantity']) {
-                         throw new ApiException('Produto ' . $product->name . ' não tem estoque suficiente.', 'Reponha o estoques', 409);
-                    }
-
-                    $totalAmount += $product->price * $productData['quantity'];
-                }
-
-                // Cria o pedido
-                $order = Order::create([
-                    'user_id' => Auth::user()->id, // Provisório até implementarmos autenticação
-                    'total_amount' => $totalAmount,
-                    'status' => 'pendente',
-                ]);
-
-                // Vincula os produtos ao pedido e atualiza o estoque
-                foreach ($validatedData['products'] as $productData) {
-                    $product = Product::findOrFail($productData['product_id']);
-                    
-                    $order->products()->attach($productData['product_id'], [
-                        'quantity' => $productData['quantity'],
-                        'price' => $product->price
-                    ]);
-
-                    $product->decrement('stock', $productData['quantity']);
-                }
-
-                return $order;
-            });
-            Cache::forget('orders');
-            return response()->json(['message'=> 'Pedido criado com sucesso!', $order->load('products')], 201);
+            return response()->json(['message' => 'Seu pedido está sendo processado.'], 202); // 
 
         } catch (ApiException $e) {
             throw $e;
