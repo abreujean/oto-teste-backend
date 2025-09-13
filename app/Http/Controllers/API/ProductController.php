@@ -12,7 +12,13 @@ class ProductController extends Controller
 
     public function index()
     {
-         return Product::paginate(15);
+        try {
+
+            return Product::paginate(15);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Ocorreu um erro interno ao listar produto.'], 500);
+        }
     }
 
     public function store(StoreProductRequest $request)
@@ -23,7 +29,7 @@ class ProductController extends Controller
             return response()->json($product, 201);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Ocorreu um erro interno ao criar o produto.'], 500);
+            return response()->json(['message' => 'Ocorreu um erro interno ao criar o produto.'], 500);
         }
     }
 
@@ -35,7 +41,7 @@ class ProductController extends Controller
             return response()->json($product, 201);
 
          } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['error' => 'Produto não encontrado.'], 404);
+            return response()->json(['message' => 'Produto não encontrado.'], 404);
         }
     }
 
@@ -48,9 +54,7 @@ class ProductController extends Controller
             return response()->json($product);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['error' => 'Produto não encontrado.'], 404);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Ocorreu um erro interno ao atualizar o produto.'], 500);
+            return response()->json(['message' => 'Produto não encontrado.'], 404);
         }
     }
 
@@ -60,7 +64,7 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
 
             if ($product->orders()->exists()) {
-                return response()->json(['error' => 'Não é possível excluir um produto que está vinculado a um pedido.'], 422);
+                return response()->json(['message' => 'Não é possível excluir um produto que está vinculado a um pedido.'], 422);
             }
 
             $product->delete();
@@ -68,9 +72,7 @@ class ProductController extends Controller
             return response()->json(null, 204);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['error' => 'Produto não encontrado.'], 404);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Ocorreu um erro interno ao excluir o produto.'], 500);
+            return response()->json(['message' => 'Produto não encontrado.'], 404);
         }
     }
 }
