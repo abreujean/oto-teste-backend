@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Http\Requests\StoreProductRequest;
@@ -19,9 +20,7 @@ class ProductController extends Controller
             return response()->json($product, 200);
 
         } catch (\Exception $e) {
-            return response()->json(
-                ['message' => 'Ocorreu um erro interno ao listar produto.',
-                'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao listar produto.', $e->getMessage(), 500);   
         }
     }
 
@@ -33,9 +32,7 @@ class ProductController extends Controller
             return response()->json(['message' => 'Produto ' . $product->name .  ' criado com sucesso!'], 201);
 
         } catch (\Exception $e) {
-            return response()->json(
-                ['message' => 'Ocorreu um erro interno ao criar o produto.',
-                'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao criar o produto.', $e->getMessage(), 500);
         }
     }
 
@@ -46,11 +43,11 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
             return response()->json($product, 200);
 
-         } catch (ModelNotFoundException) {
-            return response()->json(['message' => 'Produto não encontrado.'], 404);
+         } catch (ModelNotFoundException $e) {
+            throw new ApiException('Produto não encontrado.', $e->getMessage(), 404);
+
          } catch (\Exception $e) {
-            return response()->json( ['message' => 'Ocorreu um erro interno ao buscar o produto.',
-                'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao buscar o produto.', $e->getMessage(), 400);
         }
     }
 
@@ -62,11 +59,10 @@ class ProductController extends Controller
 
             return response()->json(['message' => 'Produto ' . $product->name .  ' foi atualizado sucesso!'], 201);
 
-        } catch (ModelNotFoundException) {
-            return response()->json(['message' => 'Produto não encontrado.'], 404); 
+        } catch (ModelNotFoundException $e) {
+            throw new ApiException('Produto não encontrado.', $e->getMessage(), 404);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Ocorreu um erro interno ao atualizar o produto.',
-            'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao atualizar o produto.', $e->getMessage(), 500);
         }
     }
 
@@ -76,19 +72,17 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
 
             if ($product->orders()->exists()) {
-                return response()->json(['message' => 'Não é possível excluir um produto que está vinculado a um pedido.'], 422);
+                throw new ApiException('Não é possível excluir um produto que está vinculado a um pedido.', 'desvincule os produtos do pedido', 402);
             }
 
             $product->delete();
 
             return response()->json(['message' => 'Produto foi excluido com sucesso!'], 200);
 
-        } catch (ModelNotFoundException) {
-            return response()->json(['message' => 'Produto não encontrado.'], 404);
+        } catch (ModelNotFoundException $e) {
+            throw new ApiException('Produto não encontrado.', $e->getMessage(), 404);
         } catch (\Exception $e) {
-            return response()->json(
-                ['message' => 'Ocorreu um erro interno ao excluir o produto.',
-                'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao excluir o produto.', $e->getMessage(), 500);
         }
     }
 }

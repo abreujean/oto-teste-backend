@@ -22,14 +22,12 @@ class OrderController extends Controller
             return response()->json($order, 200);
 
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Ocorreu um erro interno ao listar o pedido.',
-        'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao listar o pedido.', $e->getMessage(), 500);
         }
     }
 
     public function store(StoreOrderRequest $request)
     {
-
         try {
             // DB::transaction garante que tudo abaixo seja executado em uma transação.
             // Ele faz o commit automaticamente no sucesso, ou rollback em caso de erro.
@@ -42,7 +40,7 @@ class OrderController extends Controller
                     $product = Product::findOrFail($productData['product_id']);
 
                     if ($product->stock < $productData['quantity']) {
-                         throw new ApiException('Produto ' . $product->name . ' não tem estoque suficiente.');
+                         throw new ApiException('Produto ' . $product->name . ' não tem estoque suficiente.', 'Reponha o estoques', 400);
                     }
 
                     $totalAmount += $product->price * $productData['quantity'];
@@ -72,12 +70,8 @@ class OrderController extends Controller
 
             return response()->json(['message'=> 'Pedido criado com sucesso!', $order->load('products')], 201);
 
-        } catch (ApiException $e) {
-             return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
-            return response()->json(
-                ['message' => 'Ocorreu um erro interno ao criar o pedido.',
-                'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao criar o pedido.', $e->getMessage(), 500);
         }
     }
 
@@ -88,17 +82,15 @@ class OrderController extends Controller
             $order = Order::findOrFail($id);
             return response()->json($order, 201);
 
-         } catch (ModelNotFoundException) {
-            return response()->json(['message' => 'Pedido não encontrado.'], 404);
+         } catch (ModelNotFoundException $e) {
+            throw new ApiException('Pedido não encontrado.', $e->getMessage(), 404);
          } catch (\Exception $e) {
-            return response()->json( ['message' => 'Ocorreu um erro interno ao buscar o pedido.',
-                'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao buscar o pedido.', $e->getMessage(), 500);
         }
     }
 
     public function updateStatus(UpdateOrderStatusRequest $request, string $id)
     {
-
         try {
             $order = Order::findOrFail($id);
             $order->status = $request->validated()['status'];
@@ -106,11 +98,10 @@ class OrderController extends Controller
 
             return response()->json($order);
         
-        }  catch (ModelNotFoundException) {
-            return response()->json(['message' => 'Pedido não encontrado.'], 404); 
+        }  catch (ModelNotFoundException $e) {
+            throw new ApiException('Pedido não encontrado.', $e->getMessage(), 404);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Ocorreu um erro interno ao atualizar o pedido.',
-            'error' => $e->getMessage()], 500);
+            throw new ApiException('Ocorreu um erro interno ao atualizar o pedido.', $e->getMessage(), 500);
         }
     }
 
