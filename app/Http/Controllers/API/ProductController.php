@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ProductController extends Controller
 {
@@ -14,10 +15,13 @@ class ProductController extends Controller
     {
         try {
 
-            return Product::paginate(15);
+            $product = Product::all();
+            return response()->json($product, 200);
 
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Ocorreu um erro interno ao listar produto.'], 500);
+            return response()->json(
+                ['message' => 'Ocorreu um erro interno ao listar produto.',
+                'error' => $e->getMessage()], 500);
         }
     }
 
@@ -26,10 +30,12 @@ class ProductController extends Controller
         try {
 
             $product = Product::create($request->validated());
-            return response()->json($product, 201);
+            return response()->json(['message' => 'Produto ' . $product->name .  ' criado com sucesso!'], 201);
 
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Ocorreu um erro interno ao criar o produto.'], 500);
+            return response()->json(
+                ['message' => 'Ocorreu um erro interno ao criar o produto.',
+                'error' => $e->getMessage()], 500);
         }
     }
 
@@ -38,10 +44,13 @@ class ProductController extends Controller
         try {
 
             $product = Product::findOrFail($id);
-            return response()->json($product, 201);
+            return response()->json($product, 200);
 
-         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+         } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Produto não encontrado.'], 404);
+         } catch (\Exception $e) {
+            return response()->json( ['message' => 'Ocorreu um erro interno ao buscar o produto.',
+                'error' => $e->getMessage()], 500);
         }
     }
 
@@ -51,10 +60,13 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
             $product->update($request->validated());
 
-            return response()->json($product);
+            return response()->json(['message' => 'Produto ' . $product->name .  ' foi atualizado sucesso!'], 201);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['message' => 'Produto não encontrado.'], 404);
+        } catch (ModelNotFoundException) {
+            return response()->json(['message' => 'Produto não encontrado.'], 404); 
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Ocorreu um erro interno ao atualizar o produto.',
+            'error' => $e->getMessage()], 500);
         }
     }
 
@@ -69,10 +81,14 @@ class ProductController extends Controller
 
             $product->delete();
 
-            return response()->json(null, 204);
+            return response()->json(['message' => 'Produto foi excluido com sucesso!'], 200);
 
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Produto não encontrado.'], 404);
+        } catch (\Exception $e) {
+            return response()->json(
+                ['message' => 'Ocorreu um erro interno ao excluir o produto.',
+                'error' => $e->getMessage()], 500);
         }
     }
 }

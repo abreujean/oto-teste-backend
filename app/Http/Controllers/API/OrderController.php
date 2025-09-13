@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderStatusRequest;
 use App\Models\Order;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Throwable; // Mais abrangente para capturar qualquer tipo de erro
 
@@ -15,11 +17,13 @@ class OrderController extends Controller
     public function index()
     {
         try {
-        
-            return Order::paginate(15);
+
+            $order = Order::all();
+            return response()->json($order, 200);
 
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Ocorreu um erro interno ao listar o pedido.'], 500);
+            return response()->json(['message' => 'Ocorreu um erro interno ao listar o pedido.',
+        'error' => $e->getMessage()], 500);
         }
     }
 
@@ -38,7 +42,7 @@ class OrderController extends Controller
                     $product = Product::findOrFail($productData['product_id']);
 
                     if ($product->stock < $productData['quantity']) {
-                        throw new \Exception('Produto ' . $product->name . ' não tem estoque suficiente.');
+                         throw new ApiException('Produto ' . $product->name . ' não tem estoque suficiente.');
                     }
 
                     $totalAmount += $product->price * $productData['quantity'];
@@ -48,7 +52,7 @@ class OrderController extends Controller
                 $order = Order::create([
                     'user_id' => 1, // Provisório até implementarmos autenticação
                     'total_amount' => $totalAmount,
-                    'status' => 'pending',
+                    'status' => 'pendente',
                 ]);
 
                 // Vincula os produtos ao pedido e atualiza o estoque
@@ -66,10 +70,14 @@ class OrderController extends Controller
                 return $order;
             });
 
-            return response()->json($order->load('products'), 201);
+            return response()->json(['message'=> 'Pedido criado com sucesso!', $order->load('products')], 201);
 
-        } catch (Throwable $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (ApiException $e) {
+             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            return response()->json(
+                ['message' => 'Ocorreu um erro interno ao criar o pedido.',
+                'error' => $e->getMessage()], 500);
         }
     }
 
@@ -80,8 +88,11 @@ class OrderController extends Controller
             $order = Order::findOrFail($id);
             return response()->json($order, 201);
 
-         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+         } catch (ModelNotFoundException) {
             return response()->json(['message' => 'Pedido não encontrado.'], 404);
+         } catch (\Exception $e) {
+            return response()->json( ['message' => 'Ocorreu um erro interno ao buscar o pedido.',
+                'error' => $e->getMessage()], 500);
         }
     }
 
@@ -95,8 +106,11 @@ class OrderController extends Controller
 
             return response()->json($order);
         
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json(['message' => 'Pedido não encontrado.'], 404);
+        }  catch (ModelNotFoundException) {
+            return response()->json(['message' => 'Pedido não encontrado.'], 404); 
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Ocorreu um erro interno ao atualizar o pedido.',
+            'error' => $e->getMessage()], 500);
         }
     }
 
