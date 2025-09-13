@@ -3,14 +3,18 @@
 use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\OrderController;
 use App\Http\Controllers\API\UserController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\API\AuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
-    return $request->user();
-});
+Route::post('login', [AuthController::class, 'login']);
 
-Route::apiResource('products', ProductController::class);
-Route::apiResource('orders', OrderController::class);
-Route::patch('orders/{id}/status', [OrderController::class, 'updateStatus']);
-Route::apiResource('users', UserController::class);
+Route::middleware('auth:api')->group(function () {
+    Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('refresh', [AuthController::class, 'refresh']);
+    Route::get('user-profile', [AuthController::class, 'userProfile']);
+
+    Route::apiResource('products', ProductController::class);
+    Route::apiResource('orders', OrderController::class);
+    Route::patch('orders/{id}/status', [OrderController::class, 'updateStatus']);
+    Route::apiResource('users', UserController::class);
+});
