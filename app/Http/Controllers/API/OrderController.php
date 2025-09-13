@@ -9,6 +9,8 @@ use App\Http\Requests\UpdateOrderStatusRequest;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Throwable; // Mais abrangente para capturar qualquer tipo de erro
 
@@ -18,8 +20,11 @@ class OrderController extends Controller
     {
         try {
 
-            $order = Order::all()->load('products');
-            return response()->json($order, 200);
+            $orders = Cache::remember('orders', 60, function () {
+                return Order::with('products')->get();
+            });
+
+            return response()->json($orders, 200);
 
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro interno ao listar o pedido.', $e->getMessage(), 500);
@@ -48,7 +53,7 @@ class OrderController extends Controller
 
                 // Cria o pedido
                 $order = Order::create([
-                    'user_id' => 1, // Provisório até implementarmos autenticação
+                    'user_id' => Auth::user()->id, // Provisório até implementarmos autenticação
                     'total_amount' => $totalAmount,
                     'status' => 'pendente',
                 ]);
@@ -67,7 +72,7 @@ class OrderController extends Controller
 
                 return $order;
             });
-
+            Cache::forget('orders');
             return response()->json(['message'=> 'Pedido criado com sucesso!', $order->load('products')], 201);
 
         } catch (ApiException $e) {
@@ -115,6 +120,7 @@ class OrderController extends Controller
                 $order->save();
             });
 
+            Cache::forget('orders');
             return response()->json(['message' => 'Status do pedido atualizado com sucesso!', 'data' => Order::findOrFail($id)]);
 
         } catch (ModelNotFoundException $e) {

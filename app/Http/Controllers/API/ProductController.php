@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -16,8 +17,10 @@ class ProductController extends Controller
     {
         try {
 
-            $product = Product::all();
-            return response()->json($product, 200);
+            $products = Cache::remember('products', 60, function () {
+                return Product::all();
+            });
+            return response()->json($products, 200);
 
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro interno ao listar produto.', $e->getMessage(), 500);   
@@ -29,7 +32,8 @@ class ProductController extends Controller
         try {
 
             $product = Product::create($request->validated());
-            return response()->json(['message' => 'Produto ' . $product->name .  ' criado com sucesso!'], 201);
+            Cache::forget('products');
+            return response()->json(['message' => 'Produto ' . $product->name .  ' criado com sucesso!', $product], 201);
 
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro interno ao criar o produto.', $e->getMessage(), 500);
@@ -56,6 +60,7 @@ class ProductController extends Controller
         try {
             $product = Product::findOrFail($id);
             $product->update($request->validated());
+            Cache::forget('products');
 
             return response()->json(['message' => 'Produto ' . $product->name .  ' foi atualizado sucesso!'], 201);
 
@@ -76,7 +81,8 @@ class ProductController extends Controller
             }
 
             $product->delete();
-
+            Cache::forget('products');
+            
             return response()->json(['message' => 'Produto foi excluido com sucesso!'], 200);
 
         } catch (ModelNotFoundException $e) {

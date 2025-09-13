@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -17,7 +18,10 @@ class UserController extends Controller
     {
         try {
 
-            $users = User::all();
+            $users = Cache::remember('users', 60, function () {
+                return User::all();
+            });
+
             return response()->json($users, 200);
 
         } catch (\Exception $e) {
@@ -30,8 +34,8 @@ class UserController extends Controller
         try {
 
             $validatedData = $request->validated();
-
             $user = User::create($validatedData);
+            Cache::forget('users');
 
             return response()->json(['message' => 'Usuário ' . $user->name . ' criado com sucesso!'], 201);
 
@@ -67,6 +71,7 @@ class UserController extends Controller
             }
 
             $user->update($validatedData);
+            Cache::forget('users');
 
            return response()->json(['message' => 'Usuário ' . $user->name . ' atualizado com sucesso!',
                 'data' => $user], 200);
@@ -89,7 +94,8 @@ class UserController extends Controller
             }
 
             $user->delete();
-
+            Cache::forget('users');
+            
             return response()->json(['message' => 'Usuário excluído com sucesso.'], 200);
 
         } catch (ModelNotFoundException $e) {
