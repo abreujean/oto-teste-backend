@@ -18,7 +18,7 @@ class OrderController extends Controller
     {
         try {
 
-            $order = Order::all();
+            $order = Order::all()->load('products');
             return response()->json($order, 200);
 
         } catch (\Exception $e) {
@@ -40,7 +40,7 @@ class OrderController extends Controller
                     $product = Product::findOrFail($productData['product_id']);
 
                     if ($product->stock < $productData['quantity']) {
-                         throw new ApiException('Produto ' . $product->name . ' não tem estoque suficiente.', 'Reponha o estoques', 400);
+                         throw new ApiException('Produto ' . $product->name . ' não tem estoque suficiente.', 'Reponha o estoques', 409);
                     }
 
                     $totalAmount += $product->price * $productData['quantity'];
@@ -70,6 +70,8 @@ class OrderController extends Controller
 
             return response()->json(['message'=> 'Pedido criado com sucesso!', $order->load('products')], 201);
 
+        } catch (ApiException $e) {
+            throw $e;
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro interno ao criar o pedido.', $e->getMessage(), 500);
         }
@@ -91,15 +93,34 @@ class OrderController extends Controller
 
     public function updateStatus(UpdateOrderStatusRequest $request, string $id)
     {
-        try {
-            $order = Order::findOrFail($id);
-            $order->status = $request->validated()['status'];
-            $order->save();
 
-            return response()->json($order);
-        
-        }  catch (ModelNotFoundException $e) {
-            throw new ApiException('Pedido não encontrado.', $e->getMessage(), 404);
+        try {
+
+            if(Order::findOrFail($id)->status === 'cancelado'){
+              throw new ApiException('Não é possivel alterar o status de um pedido cancelado.','Faça um novo pedido.', 409);
+            }
+
+            DB::transaction(function () use ($request, $id) {
+                $order = Order::findOrFail($id);
+                $newStatus = $request->validated()['status'];
+
+                // Devolve o estoque se o pedido for cancelado
+                if ($newStatus === 'cancelado' && $order->status !== 'cancelado') {
+                    foreach ($order->products as $product) {
+                        Product::where('id', $product->id)->increment('stock', $product->pivot->quantity);
+                    }
+                }
+
+                $order->status = $newStatus;
+                $order->save();
+            });
+
+            return response()->json(['message' => 'Status do pedido atualizado com sucesso!', 'data' => Order::findOrFail($id)]);
+
+        } catch (ModelNotFoundException $e) {
+            throw new ApiException('Pedido não encontrado.', '', 404);
+        } catch (ApiException $e) {
+            throw $e;
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro interno ao atualizar o pedido.', $e->getMessage(), 500);
         }

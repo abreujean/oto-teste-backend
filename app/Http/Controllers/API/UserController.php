@@ -30,7 +30,6 @@ class UserController extends Controller
         try {
 
             $validatedData = $request->validated();
-            $validatedData['password'] = Hash::make($validatedData['password']);
 
             $user = User::create($validatedData);
 
@@ -63,8 +62,8 @@ class UserController extends Controller
             $user = User::findOrFail($id);
             $validatedData = $request->validated();
 
-            if (isset($validatedData['password'])) {
-                $validatedData['password'] = Hash::make($validatedData['password']);
+            if (empty($validatedData['password'])) {
+                unset($validatedData['password']);
             }
 
             $user->update($validatedData);
@@ -95,7 +94,8 @@ class UserController extends Controller
 
         } catch (ModelNotFoundException $e) {
             throw new ApiException('Usuário não encontrado.', $e->getMessage(), 404);   
-
+        } catch (ApiException $e) {
+            throw $e;
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro ao deletar o usuário.', $e->getMessage(), 500);   
         }
