@@ -1,61 +1,195 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# API Teste Técnico: Backend 
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Esta é uma API RESTful, construída com o framework Laravel. Ela fornece funcionalidades para gerenciamento de usuários, produtos e pedidos, utilizando filas para processamento assíncrono de pedidos e autenticação baseada em JWT.
 
-## About Laravel
+## Índice
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- [Visão Geral](#visão-geral)
+- [Pré-requisitos](#pré-requisitos)
+- [Instalação](#instalação)
+- [Configuração do Ambiente](#configuração-do-ambiente)
+- [Executando a Aplicação](#executando-a-aplicação)
+- [Endpoints da API](#endpoints-da-api)
+- [Executando os Testes](#executando-os-testes)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Visão Geral
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+A API permite:
 
-## Learning Laravel
+- Autenticação de usuários (login, logout, refresh token).
+- Gerenciamento de perfil de usuário.
+- CRUD completo para Usuários.
+- CRUD completo para Produtos.
+- Criação e gerenciamento de Pedidos.
+- Processamento assíncrono de pedidos usando filas e jobs.
+- Notificações por e-mail sobre o status do pedido.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Pré-requisitos
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+- PHP 8.2 ou superior
+- Composer
+- Servidor de Banco de Dados (MySQL, PostgreSQL, etc.)
+- Redis
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Instalação
 
-## Laravel Sponsors
+1.  **Clone o repositório:**
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+    ```bash
+    git clone https://github.com/seu-usuario/oto-teste-backend.git
+    cd oto-teste-backend
+    ```
 
-### Premium Partners
+2.  **Instale as dependências do Composer:**
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+    ```bash
+    composer install
+    ```
 
-## Contributing
+3.  **Copie o arquivo de ambiente:**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+    ```bash
+    cp .env.example .env
+    ```
 
-## Code of Conduct
+4.  **Gere a chave da aplicação:**
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+    ```bash
+    php artisan key:generate
+    ```
 
-## Security Vulnerabilities
+5.  **Gere a chave JWT:**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+    ```bash
+    php artisan jwt:secret
+    ```
 
-## License
+6.  **Execute as migrações do banco de dados:**
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+    ```bash
+    php artisan migrate --seed
+    ```
+
+**Nota:** Após executar os seeders, um usuário padrão será criado com as seguintes credenciais:
+- **E-mail:** `oto@gmail.com`
+- **Senha:** `oto123456`
+
+
+## Configuração do Ambiente
+
+O arquivo `.env.example` serve como um modelo com as variáveis de ambiente utilizadas no ambiente de desenvolvimento.
+
+Abra o arquivo `.env` e configure as seguintes variáveis:
+
+### Banco de Dados
+
+Configure as credenciais do seu banco de dados:
+
+```ini
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=oto_teste_backend
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+### Filas (Queues) e Redis
+
+Para o processamento assíncrono de pedidos, a aplicação está configurada para usar Redis.
+
+1.  **Certifique-se de que o Redis está instalado e em execução.**
+
+2.  **Configure a conexão da fila para Redis:**
+
+    ```ini
+    QUEUE_CONNECTION=redis
+    ```
+
+3.  **Configure os detalhes de conexão do Redis:**
+
+    ```ini
+    REDIS_CLIENT=phpredis
+    REDIS_HOST=127.0.0.1
+    REDIS_PASSWORD=null
+    REDIS_PORT=6379
+    ```
+
+### E-mail (Mailtrap)
+
+Para testar o envio de e-mails de notificação em um ambiente de desenvolvimento, é recomendado o uso do [Mailtrap](https://mailtrap.io/).
+
+1.  Crie uma conta no Mailtrap e obtenha suas credenciais SMTP.
+
+2.  Configure as variáveis de e-mail no `.env`:
+
+    ```ini
+    MAIL_MAILER=smtp
+    MAIL_HOST=sandbox.smtp.mailtrap.io
+    MAIL_PORT=2525
+    MAIL_USERNAME=seu_usuario_mailtrap
+    MAIL_PASSWORD=sua_senha_mailtrap
+    MAIL_FROM_ADDRESS="hello@example.com"
+    MAIL_FROM_NAME="${APP_NAME}"
+    ```
+
+## Executando a Aplicação
+
+Para rodar a aplicação, você precisará iniciar o servidor web do Laravel e o worker da fila.
+
+1.  **Inicie o servidor de desenvolvimento:**
+
+    ```bash
+    php artisan serve
+    ```
+
+2.  **Inicie o worker da fila para processar os jobs:**
+
+    ```bash
+    php artisan queue:work
+    ```
+
+## Endpoints da API
+
+Todos os endpoints, exceto `/login`, requerem um token de autenticação JWT no cabeçalho `Authorization: Bearer <token>`.
+
+### Autenticação
+
+-   `POST /api/login` - Realiza o login do usuário e retorna um token JWT.
+-   `POST /api/v1/logout` - Invalida o token JWT do usuário.
+-   `POST /api/v1/refresh` - Atualiza um token JWT expirado.
+-   `GET /api/v1/user-profile` - Retorna os dados do usuário autenticado.
+
+### Usuários
+
+-   `GET /api/v1/users` - Lista todos os usuários.
+-   `POST /api/v1/users` - Cria um novo usuário.
+-   `GET /api/v1/users/{id}` - Obtém os detalhes de um usuário.
+-   `PUT/PATCH /api/v1/users/{id}` - Atualiza um usuário.
+-   `DELETE /api/v1/users/{id}` - Exclui um usuário.
+-   `GET /api/v1/users/{id}/orders` - Lista todos os pedidos de um usuário específico.
+
+### Produtos
+
+-   `GET /api/v1/products` - Lista todos os produtos.
+-   `POST /api/v1/products` - Cria um novo produto.
+-   `GET /api/v1/products/{id}` - Obtém os detalhes de um produto.
+-   `PUT/PATCH /api/v1/products/{id}` - Atualiza um produto.
+-   `DELETE /api/v1/products/{id}` - Exclui um produto.
+
+### Pedidos (Orders)
+
+-   `GET /api/v1/orders` - Lista todos os pedidos.
+-   `POST /api/v1/orders` - Cria um novo pedido.
+-   `GET /api/v1/orders/{id}` - Obtém os detalhes de um pedido.
+-   `PUT/PATCH /api/v1/orders/{id}` - Atualiza um pedido.
+-   `DELETE /api/v1/orders/{id}` - Exclui um pedido.
+-   `PATCH /api/v1/orders/{id}/status` - Atualiza o status de um pedido.
+
+## Executando os Testes
+
+Para executar a suíte de testes automatizados, utilize o seguinte comando:
+
+```bash
+php artisan test
+```
