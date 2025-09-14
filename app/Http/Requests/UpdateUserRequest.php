@@ -19,7 +19,7 @@ class UpdateUserRequest extends FormRequest
         $userId = $this->route('user');
 
         return [
-            'name' => 'sometimes|required|string|max:255',
+            'name' => ['sometimes','required','string','max:255','regex:/^(?=.*[a-zA-ZÀ-ÿ])[a-zA-ZÀ-ÿ0-9\s.]+$/u'],
             'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $userId,
             'password' => 'sometimes|required|string|min:6|confirmed',
         ];

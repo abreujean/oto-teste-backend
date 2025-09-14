@@ -37,7 +37,7 @@ class UserController extends Controller
             $user = User::create($validatedData);
             Cache::forget('users');
 
-            return response()->json(['message' => 'Usuário ' . $user->name . ' criado com sucesso!'], 201);
+            return response()->json(['message' => 'Usuario ' . $user->name . ' criado com sucesso!'], 201);
 
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro ao criar o usuário.', $e->getMessage(), 500);
@@ -90,7 +90,7 @@ class UserController extends Controller
             $user = User::findOrFail($id);
 
             if ($user->orders()->exists()) {
-                throw new ApiException('Não é possível excluir o usuário, pois ele possui pedidos associados.', '', 409);   
+                throw new ApiException('Não é possível excluir o usuário, pois ele possui pedidos associados.', 'Unauthorized', 409);   
             }
 
             $user->delete();
@@ -112,6 +112,9 @@ class UserController extends Controller
         try {
             $user = User::findOrFail($id);
             $orders = $user->orders;
+             if ($orders->isEmpty()) {
+                return response()->json(['message' => 'Nenhum pedido vinculado a esse usuário foi encontrado.'], 200);
+            }
             return response()->json($orders, 200);
         } catch (ModelNotFoundException $e) {
             throw new ApiException('Usuário não encontrado.', $e->getMessage(), 404);

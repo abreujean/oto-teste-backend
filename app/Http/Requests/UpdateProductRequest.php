@@ -31,10 +31,18 @@ class UpdateProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'sometimes|required|string|max:255',
+            'name' => ['sometimes','required','string','max:255','regex:/^(?=.*[a-zA-ZÀ-ÿ])[a-zA-ZÀ-ÿ0-9\s.]+$/u'],
             'description' => 'nullable|string',
             'price' => 'sometimes|required|numeric|min:0',
             'stock' => 'sometimes|required|integer|min:0',
+        ];
+    }
+
+     public function messages(): array
+    {
+        return [
+            'name.regex' => 'O campo nome deve conter pelo menos uma letra.',
+            'name.required' => 'O campo nome invalido.',
         ];
     }
 
