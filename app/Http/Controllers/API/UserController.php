@@ -113,7 +113,7 @@ class UserController extends Controller
             $user = User::findOrFail($id);
             $orders = $user->orders;
              if ($orders->isEmpty()) {
-                return response()->json(['message' => 'Nenhum pedido vinculado a esse usuário foi encontrado.'], 200);
+                return response()->json(['message' => 'Nenhum pedido vinculado a '. $user->name .' foi encontrado.'], 200);
             }
             return response()->json($orders, 200);
         } catch (ModelNotFoundException $e) {
