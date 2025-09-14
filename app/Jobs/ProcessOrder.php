@@ -2,73 +2,70 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\ApiException;
 use App\Models\Order;
 use App\Models\Product;
+use App\Notifications\OrderStatusUpdated;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use App\Exceptions\ApiException;
+use Illuminate\Support\Facades\Log;
 
 class ProcessOrder implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $data;
-    protected $userId;
+    protected $order;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct($data, $userId)
+    public function __construct(Order $order)
     {
-        $this->data = $data;
-        $this->userId = $userId;
+        $this->order = $order;
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
-        DB::transaction(function () {
+        DB::beginTransaction();
+
+        // Atualiza o status para "em processamento"
+        $this->order->update(['status' => 'em processamento']);
+        $this->order->user->notify(new OrderStatusUpdated($this->order, 'em processamento', ''));
+
+        try {
             $totalAmount = 0;
 
             // Valida o estoque e calcula o total
-            foreach ($this->data['products'] as $productData) {
-                $product = Product::findOrFail($productData['product_id']);
+            foreach ($this->order->products as $product) {
+                $productModel = Product::findOrFail($product->id);
 
-                if ($product->stock < $productData['quantity']) {
-                    throw new \Exception('Produto ' . $product->name . ' não tem estoque suficiente.');
+                if ($productModel->stock < $product->pivot->quantity) {
+                    throw new \Exception('Produto ' . $productModel->name . ' não tem estoque suficiente.');
                 }
 
-                $totalAmount += $product->price * $productData['quantity'];
+                $totalAmount += $productModel->price * $product->pivot->quantity;
             }
 
-            // Cria o pedido
-            $order = Order::create([
-                'user_id' => $this->userId,
-                'total_amount' => $totalAmount,
-                'status' => 'pendente',
-            ]);
+            // Atualiza o valor total do pedido
+            $this->order->total_amount = $totalAmount;
 
-            // Vincula os produtos ao pedido e atualiza o estoque
-            foreach ($this->data['products'] as $productData) {
-                $product = Product::findOrFail($productData['product_id']);
-                
-                $order->products()->attach($productData['product_id'], [
-                    'quantity' => $productData['quantity'],
-                    'price' => $product->price
-                ]);
-
-                $product->decrement('stock', $productData['quantity']);
+            // Atualiza o estoque
+            foreach ($this->order->products as $product) {
+                $productModel = Product::findOrFail($product->id);
+                $productModel->decrement('stock', $product->pivot->quantity);
             }
+            
+            DB::commit();
 
-            // Após o sucesso, invalida o cache
-            Cache::forget('orders');
-        });
+            // Atualiza o status para "concluído"
+            $this->order->update(['status' => 'concluido']);
+            $this->order->user->notify(new OrderStatusUpdated($this->order, 'concluido', ''));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->order->update(['status' => 'cancelado']);
+            $this->order->user->notify(new OrderStatusUpdated($this->order, 'cancelado', $e->getMessage()));
+        }
     }
 }

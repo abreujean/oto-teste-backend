@@ -107,4 +107,17 @@ class UserController extends Controller
         }
     }
 
+    public function orders(string $id): JsonResponse
+    {
+        try {
+            $user = User::findOrFail($id);
+            $orders = $user->orders;
+            return response()->json($orders, 200);
+        } catch (ModelNotFoundException $e) {
+            throw new ApiException('Usuário não encontrado.', $e->getMessage(), 404);
+        } catch (\Exception $e) {
+            throw new ApiException('Ocorreu um erro ao buscar os pedidos do usuário.', $e->getMessage(), 500);
+        }
+    }
+
 }

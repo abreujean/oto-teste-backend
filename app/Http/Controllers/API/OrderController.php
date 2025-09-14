@@ -37,13 +37,32 @@ class OrderController extends Controller
         try {
             $validatedData = $request->validated();
 
-            // Despacha o Job para a fila
-            ProcessOrder::dispatch($validatedData, Auth::user()->id);
+            // Cria o pedido com status pendente
+            $order = Order::create([
+                'user_id' => Auth::user()->id,
+                'total_amount' => 0,
+                'status' => 'pendente',
+            ]);
 
-            return response()->json(['message' => 'Seu pedido está sendo processado.'], 202); // 
+            // Vincula os produtos ao pedido
+            foreach ($validatedData['products'] as $productData) {
+                $product = Product::findOrFail($productData['product_id']);
+                $order->products()->attach($productData['product_id'], [
+                    'quantity' => $productData['quantity'],
+                    'price' => $product->price
+                ]);
+            }
 
-        } catch (ApiException $e) {
-            throw $e;
+            // Despacha o job para processar o pedido
+            ProcessOrder::dispatch($order);
+
+            // Invalida o cache
+            Cache::forget('orders');
+
+            return response()->json(['message' => 'Pedido recebido e está sendo processado, acompanhe pelo seu email.', 'data' => $order], 202);
+
+        } catch (ModelNotFoundException $e) {
+            throw new ApiException('Produto não encontrado.', $e->getMessage(), 404);
         } catch (\Exception $e) {
             throw new ApiException('Ocorreu um erro interno ao criar o pedido.', $e->getMessage(), 500);
         }
